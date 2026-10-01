@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Castillo del Rey Honduras</title>
+
+</head>
+
+<body>
+
+    <h1>
+        Castillo del Rey Honduras
+    </h1>
+
+    <h2>
+        Estadísticas
+    </h2>
+
+    <p>
+        Consulta y reporta las estadísticas de nuestros programas.
+    </p>
+
+    <h2>
+        Inscripciones
+    </h2>
+
+    <p>
+        Inscríbete en nuestros programas.
+    </p>
+
+</body>
+
+</html>
