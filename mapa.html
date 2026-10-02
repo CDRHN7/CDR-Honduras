@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Mapa de Programas | Castillo del Rey Honduras</title>
+
+
+    <!-- Leaflet -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #222;
+        }
+
+
+        /* ENCABEZADO */
+
+        .encabezado {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            position: relative;
+            z-index: 1000;
+        }
+
+
+        .encabezado h1 {
+            margin: 0 0 8px;
+            font-size: 28px;
+        }
+
+
+        .encabezado p {
+            margin: 0;
+            color: #666;
+        }
+
+
+        /* CONTENEDOR */
+
+        .contenedor {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+
+
+        /* ESTADÍSTICAS */
+
+        .estadisticas {
+            background: white;
+            border-radius: 15px;
+            padding: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.07);
+        }
+
+
+        .numero {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+
+        .texto-estadistica {
+            color: #666;
+            margin-top: 5px;
+        }
+
+
+        /* MAPA */
+
+        #mapa {
+            width: 100%;
+            height: 650px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 3px 20px rgba(0,0,0,0.12);
+        }
+
+
+        /* MENSAJE */
+
+        #mensaje {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+
+        .error {
+            color: #b00020;
+        }
+
+
+        /* POPUP */
+
+        .popup-titulo {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+
+        .popup-dato {
+            margin: 5px 0;
+        }
+
+
+        .volver {
+            display: block;
+            text-align: center;
+            margin: 20px 0;
+            color: #444;
+            text-decoration: none;
+        }
+
+
+        /* CELULAR / TABLET */
+
+        @media (max-width: 768px) {
+
+            .encabezado h1 {
+                font-size: 23px;
+            }
+
+            .contenedor {
+                padding: 12px;
+            }
+
+            #mapa {
+                height: 70vh;
+                min-height: 500px;
+                border-radius: 12px;
+            }
+
+            .numero {
+                font-size: 26px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <header class="encabezado">
+
+        <h1>
+            🗺️ Mapa de Programas
+        </h1>
+
+        <p>
+            Castillo del Rey Honduras
+        </p>
+
+    </header>
+
+
+
+    <main class="contenedor">
+
+
+        <!-- CONTADOR -->
+
+        <div class="estadisticas">
+
+            <div
+                id="contador"
+                class="numero">
+                0
+            </div>
+
+            <div class="texto-estadistica">
+                programas registrados
+            </div>
+
+        </div>
+
+
+
+        <!-- MAPA -->
+
+        <div id="mapa"></div>
+
+
+        <div id="mensaje">
+            Cargando programas...
+        </div>
+
+
+        <a
+            href="index.html"
+            class="volver">
+
+            ← Volver al inicio
+
+        </a>
+
+
+    </main>
+
+
+
+    <!-- Leaflet -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+
+    <script>
+
+
+        /* ==========================================
+           CONFIGURACIÓN DE GOOGLE SHEETS
+        ========================================== */
+
+
+        const spreadsheetId =
+            "1zWEzGjCmoESTN2zn3vIdkjzDOj4FBdHZAeI0eCk9Lvk";
+
+
+        const gid =
+            "731640002";
+
+
+        const url =
+            `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&gid=${gid}`;
+
+
+
+        /* ==========================================
+           CREAR MAPA
+        ========================================== */
+
+
+        const mapa = L.map("mapa").setView(
+            [14.072, -87.192],
+            7
+        );
+
+
+        /* MAPA BASE */
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                maxZoom: 19,
+                attribution:
+                    '&copy; OpenStreetMap contributors'
+            }
+        ).addTo(mapa);
+
+
+
+        /* ==========================================
+           CARGAR GOOGLE SHEETS
+        ========================================== */
+
+
+        fetch(url)
+
+            .then(response => {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "No se pudo acceder a Google Sheets."
+                    );
+
+                }
+
+                return response.text();
+
+            })
+
+
+            .then(csv => {
+
+                procesarDatos(csv);
+
+            })
+
+
+            .catch(error => {
+
+                console.error(error);
+
+                document.getElementById("mensaje")
+                    .innerHTML =
+                    '<span class="error">' +
+                    'No fue posible cargar los programas. ' +
+                    'Verifica que la hoja MAPA esté publicada en la web.' +
+                    '</span>';
+
+            });
+
+
+
+        /* ==========================================
+           PROCESAR CSV
+        ========================================== */
+
+
+        function procesarDatos(csv) {
+
+
+            const filas =
+                csv.split(/\r?\n/);
+
+
+            let programas = [];
+
+
+            /*
+             * Saltamos la primera fila porque
+             * contiene los encabezados.
+             */
+
+            for (
+                let i = 1;
+                i < filas.length;
+                i++
+            ) {
+
+
+                if (!filas[i].trim()) {
+                    continue;
+                }
+
+
+                /*
+                 * Dividir correctamente las columnas
+                 */
+
+                const columnas =
+                    parseCSVLine(filas[i]);
+
+
+                if (columnas.length < 4) {
+                    continue;
+                }
+
+
+                const fecha =
+                    columnas[0];
+
+
+                const zona =
+                    columnas[1];
+
+
+                const ciudad =
+                    columnas[2];
+
+
+                const ubicacion =
+                    columnas[3];
+
+
+                /*
+                 * Convertir:
+                 *
+                 * 14.070133, -87.176258
+                 *
+                 * en:
+                 *
+                 * latitud = 14.070133
+                 * longitud = -87.176258
+                 */
+
+
+                const partes =
+                    ubicacion
+                        .split(",")
+                        .map(x => x.trim());
+
+
+                if (partes.length !== 2) {
+                    continue;
+                }
+
+
+                const latitud =
+                    parseFloat(partes[0]);
+
+
+                const longitud =
+                    parseFloat(partes[1]);
+
+
+                /*
+                 * Comprobar que realmente
+                 * son coordenadas.
+                 */
+
+                if (
+                    isNaN(latitud) ||
+                    isNaN(longitud)
+                ) {
+                    continue;
+                }
+
+
+                /*
+                 * Honduras está aproximadamente
+                 * entre estas coordenadas.
+                 */
+
+                if (
+                    latitud < 12 ||
+                    latitud > 18 ||
+                    longitud < -91 ||
+                    longitud > -82
+                ) {
+
+                    console.warn(
+                        "Coordenada fuera de Honduras:",
+                        ubicacion
+                    );
+
+                }
+
+
+                programas.push({
+
+                    fecha: fecha,
+
+                    zona: zona,
+
+                    ciudad: ciudad,
+
+                    latitud: latitud,
+
+                    longitud: longitud
+
+                });
+
+            }
+
+
+
+            /* ==========================================
+               ACTUALIZAR CONTADOR
+            ========================================== */
+
+
+            document.getElementById("contador")
+                .textContent =
+                programas.length;
+
+
+
+            document.getElementById("mensaje")
+                .textContent =
+                programas.length +
+                " programa(s) cargado(s).";
+
+
+
+            /* ==========================================
+               CREAR MARCADORES
+            ========================================== */
+
+
+            programas.forEach(programa => {
+
+
+                const marcador =
+                    L.marker([
+                        programa.latitud,
+                        programa.longitud
+                    ])
+                    .addTo(mapa);
+
+
+
+                /*
+                 * Información que aparece
+                 * cuando se toca el marcador.
+                 */
+
+                const popup = `
+
+                    <div>
+
+                        <div class="popup-titulo">
+                            📍 Programa
+                        </div>
+
+                        <div class="popup-dato">
+                            <strong>Ciudad:</strong>
+                            ${escaparHTML(programa.ciudad)}
+                        </div>
+
+                        <div class="popup-dato">
+                            <strong>Zona:</strong>
+                            ${escaparHTML(programa.zona)}
+                        </div>
+
+                        <div class="popup-dato">
+                            <strong>Fecha:</strong>
+                            ${escaparHTML(programa.fecha)}
+                        </div>
+
+                        <div style="margin-top:10px;">
+
+                            <a
+                                href="https://www.google.com/maps?q=${programa.latitud},${programa.longitud}"
+                                target="_blank"
+                                rel="noopener noreferrer">
+
+                                📍 Cómo llegar
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+
+                marcador.bindPopup(popup);
+
+
+            });
+
+
+            /*
+             * Si tenemos programas,
+             * ajustamos el mapa para
+             * mostrar todos los marcadores.
+             */
+
+            if (programas.length > 0) {
+
+
+                const puntos =
+                    programas.map(programa => [
+
+                        programa.latitud,
+
+                        programa.longitud
+
+                    ]);
+
+
+                const limites =
+                    L.latLngBounds(puntos);
+
+
+                mapa.fitBounds(
+                    limites,
+                    {
+                        padding: [30, 30]
+                    }
+                );
+
+            }
+
+        }
+
+
+
+        /* ==========================================
+           LEER CSV
+        ========================================== */
+
+
+        function parseCSVLine(line) {
+
+
+            const resultado = [];
+
+            let actual = "";
+
+            let dentroComillas = false;
+
+
+            for (
+                let i = 0;
+                i < line.length;
+                i++
+            ) {
+
+
+                const caracter =
+                    line[i];
+
+
+                if (caracter === '"') {
+
+
+                    if (
+                        dentroComillas &&
+                        line[i + 1] === '"'
+                    ) {
+
+                        actual += '"';
+
+                        i++;
+
+                    } else {
+
+                        dentroComillas =
+                            !dentroComillas;
+
+                    }
+
+
+                } else if (
+                    caracter === "," &&
+                    !dentroComillas
+                ) {
+
+                    resultado.push(
+                        actual.trim()
+                    );
+
+                    actual = "";
+
+
+                } else {
+
+                    actual += caracter;
+
+                }
+
+            }
+
+
+            resultado.push(
+                actual.trim()
+            );
+
+
+            return resultado;
+
+        }
+
+
+
+        /* ==========================================
+           SEGURIDAD BÁSICA
+        ========================================== */
+
+
+        function escaparHTML(texto) {
+
+
+            return String(texto)
+
+                .replace(/&/g, "&amp;")
+
+                .replace(/</g, "&lt;")
+
+                .replace(/>/g, "&gt;")
+
+                .replace(/"/g, "&quot;")
+
+                .replace(/'/g, "&#039;");
+
+        }
+
+
+    </script>
+
+
+</body>
+
+</html>
